@@ -1,0 +1,35 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f7f7f7;
+  margin: 0;
+  padding: 0;
+}
+.container {
+  max-width: 600px;
+  margin: 5vh auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+.start-btn, #nextBtn {
+  background: #007BFF;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 1rem;
+}
+#options button {
+  display: block;
+  margin: 10px 0;
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #ccc;
+  background: #eee;
+  cursor: pointer;
+  border-radius: 5px;
+}
