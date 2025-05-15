@@ -2,75 +2,167 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vote Compass India</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #f4f7fa;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      text-align: center;
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 90%;
+    }
+
+    h1 {
+      color: #0074d9;
+      font-size: 2em;
+    }
+
+    p {
+      margin-bottom: 20px;
+      font-size: 1.1em;
+    }
+
+    button {
+      background: #0074d9;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #005fa3;
+    }
+
+    /* Popup */
+    .popup {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .popup-box {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 400px;
+      text-align: left;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    #location-info {
+      margin-top: 12px;
+    }
+
+    #start-container {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-  <div class="container" id="pincode-container">
-    <h1>Enter Your Pincode</h1>
-    <input type="text" id="pincode" maxlength="6" placeholder="e.g. 110001" />
-    <button onclick="validatePincode()">Submit</button>
-    <p id="location-info"></p>
+  <div class="container">
+    <h1>Vote Compass India</h1>
+    <p>Discover which political party aligns with your views on key national issues. Answer questions and get matched based on your values.</p>
+    <button onclick="openPopup()">Get Started</button>
   </div>
 
-  <div class="container" id="start-container" style="display: none;">
-    <h1>Vote Compass India</h1>
+  <!-- Popup for Pincode -->
+  <div class="popup" id="popup">
+    <div class="popup-box">
+      <label for="pincode">Enter your Pincode:</label>
+      <input type="text" id="pincode" maxlength="6" placeholder="e.g. 110001" />
+      <button onclick="validatePincode()">Submit</button>
+      <div id="location-info"></div>
+    </div>
+  </div>
+
+  <!-- Hidden Start -->
+  <div class="container" id="start-container" style="display:none;">
     <p id="location-summary"></p>
-    <a href="questions.html" class="start-btn">Start Questionnaire</a>
+    <a href="questions.html"><button>Proceed to Questionnaire</button></a>
   </div>
 
   <script>
-    async function validatePincode() {
+    function openPopup() {
+      document.getElementById("popup").style.display = "flex";
+    }
+
+    function validatePincode() {
       const pin = document.getElementById("pincode").value.trim();
       const info = document.getElementById("location-info");
 
-      if (!/^\d{6}$/.test(pin)) {
-        info.textContent = "❌ Invalid PIN code format.";
+      if (pin.length !== 6 || isNaN(pin)) {
+        info.innerHTML = "❌ Invalid PIN. Please enter a 6-digit Indian PIN code.";
         return;
       }
 
-      info.textContent = "🔎 Validating...";
+      fetch(`https://api.postalpincode.in/pincode/${pin}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data[0].Status === "Success") {
+            const place = data[0].PostOffice[0];
+            const location = `${place.District}, ${place.State}`;
+            window.detectedLocation = location;
 
-      try {
-        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
-        const data = await res.json();
-
-       if (data[0].Status === "Success") {
-  const place = data[0].PostOffice[0];
-  const location = `${place.District}, ${place.State}`;
-  info.innerHTML = `✅ Location detected: <strong>${location}</strong><br>Is this correct?`;
-
-  // Save to memory
-  window.detectedLocation = location;
-
-  // Show confirm buttons
-  info.innerHTML += `
-    <br><button onclick="confirmLocation(true)">Yes</button>
-    <button onclick="confirmLocation(false)">No</button>
-  `;
-}
- else {
-          info.textContent = "❌ Pincode not found.";
-        }
-      } catch (e) {
-        info.textContent = "❌ Error checking pincode.";
-      }
+            info.innerHTML = `
+              ✅ Detected location: <strong>${location}</strong><br>Is this correct?<br>
+              <button onclick="confirmLocation(true)">Yes</button>
+              <button onclick="confirmLocation(false)">No</button>
+            `;
+          } else {
+            info.innerHTML = "❌ Could not find a location for this PIN.";
+          }
+        })
+        .catch(() => {
+          info.innerHTML = "⚠️ Error contacting pincode API.";
+        });
     }
 
     function confirmLocation(isCorrect) {
-  if (isCorrect) {
-    localStorage.setItem("userLocation", window.detectedLocation);
-    document.getElementById("pincode-container").style.display = "none";
-    document.getElementById("start-container").style.display = "block";
-    document.getElementById("location-summary").textContent = `You're from: ${window.detectedLocation}`;
-  } else {
-    document.getElementById("location-info").textContent = "Please enter your correct pincode.";
-    document.getElementById("pincode").value = "";
-  }
-}
+      if (isCorrect) {
+        const popup = document.getElementById("popup");
+        popup.style.display = "none";
 
+        localStorage.setItem("userLocation", window.detectedLocation);
+        document.querySelector(".container").style.display = "none";
+        document.getElementById("start-container").style.display = "block";
+        document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
+      } else {
+        document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
+        document.getElementById("pincode").value = "";
+      }
+    }
   </script>
 </body>
-
 </html>
