@@ -60,6 +60,7 @@
       display: none;
       justify-content: center;
       align-items: center;
+      z-index: 10;
     }
 
     .popup-box {
@@ -88,6 +89,16 @@
     #start-container {
       margin-top: 20px;
     }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -104,6 +115,19 @@
       <input type="text" id="pincode" maxlength="6" placeholder="e.g. 110001" />
       <button onclick="validatePincode()">Submit</button>
       <div id="location-info"></div>
+
+      <div id="constituency-section" style="display:none; margin-top: 20px;">
+        <p><strong>Constituencies for your PIN:</strong></p>
+        <div id="constituency-list"></div>
+      </div>
+
+      <div style="margin-top: 30px;">
+        <label for="constituencySelect">Or select your constituency by name:</label>
+        <select id="constituencySelect">
+          <option value="">-- Select Constituency --</option>
+        </select>
+        <div id="selectedConstituencyInfo" style="margin-top: 12px;"></div>
+      </div>
     </div>
   </div>
 
@@ -149,7 +173,85 @@
         });
     }
 
-    function confirmLocation(isCorrect) {
+    let pinToConstituency = {};
+
+    async function loadPincodeData() {
+      try {
+        const response = await fetch('data/pincode_to_constituency.json'); // adjust path if needed
+        pinToConstituency = await response.json();
+        populateConstituencyDropdown();
+      } catch (err) {
+        console.error('Failed to load pincode data:', err);
+      }
+    }
+
+    function populateConstituencyDropdown() {
+      const constituencySelect = document.getElementById("constituencySelect");
+      const allConstituencies = new Set();
+
+      Object.values(pinToConstituency).forEach(arr => arr.forEach(c => allConstituencies.add(c)));
+
+      Array.from(allConstituencies).sort().forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        constituencySelect.appendChild(option);
+      });
+    }
+
+    document.getElementById("constituencySelect").addEventListener("change", (e) => {
+      const selected = e.target.value;
+      const info = document.getElementById("selectedConstituencyInfo");
+      if (selected) {
+        info.innerHTML = `
+          You selected <b>${selected}</b>.<br>
+          <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>
+        `;
+      } else {
+        info.textContent = "";
+      }
+    });
+
+    function showConstituenciesForPin(pin) {
+      const section = document.getElementById("constituency-section");
+      const list = document.getElementById("constituency-list");
+
+      if (!pinToConstituency[pin]) {
+        list.textContent = "No constituencies found for this PIN code.";
+      } else {
+        const constituencies = pinToConstituency[pin];
+        if (constituencies.length === 1) {
+          list.innerHTML = `Constituency: <b>${constituencies[0]}</b>.<br>
+            <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>`;
+        } else {
+          let options = constituencies.map(c => `<option value="${c}">${c}</option>`).join("");
+          list.innerHTML = `
+            Multiple constituencies found. Please select:<br>
+            <select id="multiSelect">
+              <option value="">-- Select --</option>
+              ${options}
+            </select>
+            <div id="multiResult" style="margin-top:10px;"></div>
+          `;
+
+          document.getElementById("multiSelect").addEventListener("change", (e) => {
+            const val = e.target.value;
+            const multiResult = document.getElementById("multiResult");
+            if (val) {
+              multiResult.innerHTML = `
+                You selected <b>${val}</b>.<br>
+                <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>
+              `;
+            } else {
+              multiResult.textContent = "";
+            }
+          });
+        }
+      }
+      section.style.display = "block";
+    }
+
+    async function confirmLocation(isCorrect) {
       if (isCorrect) {
         const popup = document.getElementById("popup");
         popup.style.display = "none";
@@ -158,6 +260,9 @@
         document.querySelector(".container").style.display = "none";
         document.getElementById("start-container").style.display = "block";
         document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
+
+        await loadPincodeData();
+        showConstituenciesForPin(document.getElementById("pincode").value.trim());
       } else {
         document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
         document.getElementById("pincode").value = "";
