@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vote Compass India</title>
+
+  <!-- Tom Select CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet" />
+
   <style>
     body {
       margin: 0;
@@ -51,7 +55,6 @@
       background: #005fa3;
     }
 
-    /* Popup */
     .popup {
       position: fixed;
       top: 0; left: 0;
@@ -108,7 +111,6 @@
     <button onclick="openPopup()">Get Started</button>
   </div>
 
-  <!-- Popup for Pincode -->
   <div class="popup" id="popup">
     <div class="popup-box">
       <label for="pincode">Enter your Pincode:</label>
@@ -123,7 +125,7 @@
 
       <div style="margin-top: 30px;">
         <label for="constituencySelect">Or select your constituency by name:</label>
-        <select id="constituencySelect">
+        <select id="constituencySelect" placeholder="Search Constituency">
           <option value="">-- Select Constituency --</option>
         </select>
         <div id="selectedConstituencyInfo" style="margin-top: 12px;"></div>
@@ -131,11 +133,13 @@
     </div>
   </div>
 
-  <!-- Hidden Start -->
   <div class="container" id="start-container" style="display:none;">
     <p id="location-summary"></p>
     <a href="questions.html"><button>Proceed to Questionnaire</button></a>
   </div>
+
+  <!-- Tom Select JS -->
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
   <script>
     function openPopup() {
@@ -177,8 +181,7 @@
 
     async function loadPincodeData() {
       try {
-        const response = await fetch('https://nihargu.github.io/votecompass_india/data/pincode_to_constituency.json')
-; // adjust path if needed
+        const response = await fetch('https://nihargu.github.io/votecompass_india/data/pincode_to_constituency.json');
         pinToConstituency = await response.json();
         populateConstituencyDropdown();
       } catch (err) {
@@ -187,16 +190,31 @@
     }
 
     function populateConstituencyDropdown() {
-      const constituencySelect = document.getElementById("constituencySelect");
+      const select = document.getElementById("constituencySelect");
       const allConstituencies = new Set();
 
-      Object.values(pinToConstituency).forEach(arr => arr.forEach(c => allConstituencies.add(c)));
+      Object.values(pinToConstituency).forEach(arr => {
+        arr.forEach(name => allConstituencies.add(name.trim()));
+      });
 
-      Array.from(allConstituencies).sort().forEach(name => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        constituencySelect.appendChild(option);
+      select.innerHTML = `<option value="">-- Select Constituency --</option>`;
+
+      Array.from(allConstituencies)
+        .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))
+        .forEach(name => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          select.appendChild(option);
+        });
+
+      new TomSelect("#constituencySelect", {
+        create: false,
+        sortField: {
+          field: "text",
+          direction: "asc"
+        },
+        placeholder: "Search Constituency"
       });
     }
 
@@ -262,13 +280,14 @@
         document.getElementById("start-container").style.display = "block";
         document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
 
-        await loadPincodeData();
         showConstituenciesForPin(document.getElementById("pincode").value.trim());
       } else {
         document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
         document.getElementById("pincode").value = "";
       }
     }
+
+    window.addEventListener("DOMContentLoaded", loadPincodeData);
   </script>
 </body>
 </html>
