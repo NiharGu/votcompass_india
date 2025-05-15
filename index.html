@@ -36,24 +36,40 @@
         const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
         const data = await res.json();
 
-        if (data[0].Status === "Success") {
-          const place = data[0].PostOffice[0];
-          const location = `${place.District}, ${place.State}`;
-          info.textContent = `✅ Location: ${location}`;
+       if (data[0].Status === "Success") {
+  const place = data[0].PostOffice[0];
+  const location = `${place.District}, ${place.State}`;
+  info.innerHTML = `✅ Location detected: <strong>${location}</strong><br>Is this correct?`;
 
-          // Proceed to start screen
-          document.getElementById("pincode-container").style.display = "none";
-          document.getElementById("start-container").style.display = "block";
-         localStorage.setItem("userLocation", location);  // 💾 Store location
-document.getElementById("location-summary").textContent = `You're from: ${location}`;
+  // Save to memory
+  window.detectedLocation = location;
 
-        } else {
+  // Show confirm buttons
+  info.innerHTML += `
+    <br><button onclick="confirmLocation(true)">Yes</button>
+    <button onclick="confirmLocation(false)">No</button>
+  `;
+}
+ else {
           info.textContent = "❌ Pincode not found.";
         }
       } catch (e) {
         info.textContent = "❌ Error checking pincode.";
       }
     }
+
+    function confirmLocation(isCorrect) {
+  if (isCorrect) {
+    localStorage.setItem("userLocation", window.detectedLocation);
+    document.getElementById("pincode-container").style.display = "none";
+    document.getElementById("start-container").style.display = "block";
+    document.getElementById("location-summary").textContent = `You're from: ${window.detectedLocation}`;
+  } else {
+    document.getElementById("location-info").textContent = "Please enter your correct pincode.";
+    document.getElementById("pincode").value = "";
+  }
+}
+
   </script>
 </body>
 
