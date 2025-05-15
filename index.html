@@ -7,10 +7,52 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="pincode-container">
+    <h1>Enter Your Pincode</h1>
+    <input type="text" id="pincode" maxlength="6" placeholder="e.g. 110001" />
+    <button onclick="validatePincode()">Submit</button>
+    <p id="location-info"></p>
+  </div>
+
+  <div class="container" id="start-container" style="display: none;">
     <h1>Vote Compass India</h1>
-    <p>Find out which party aligns with your views.</p>
+    <p id="location-summary"></p>
     <a href="questions.html" class="start-btn">Start Questionnaire</a>
   </div>
+
+  <script>
+    async function validatePincode() {
+      const pin = document.getElementById("pincode").value.trim();
+      const info = document.getElementById("location-info");
+
+      if (!/^\d{6}$/.test(pin)) {
+        info.textContent = "❌ Invalid PIN code format.";
+        return;
+      }
+
+      info.textContent = "🔎 Validating...";
+
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const data = await res.json();
+
+        if (data[0].Status === "Success") {
+          const place = data[0].PostOffice[0];
+          const location = `${place.District}, ${place.State}`;
+          info.textContent = `✅ Location: ${location}`;
+
+          // Proceed to start screen
+          document.getElementById("pincode-container").style.display = "none";
+          document.getElementById("start-container").style.display = "block";
+          document.getElementById("location-summary").textContent = `You're from: ${location}`;
+        } else {
+          info.textContent = "❌ Pincode not found.";
+        }
+      } catch (e) {
+        info.textContent = "❌ Error checking pincode.";
+      }
+    }
+  </script>
 </body>
+
 </html>
