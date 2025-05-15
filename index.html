@@ -184,15 +184,7 @@
         console.error('Failed to load pincode data:', err);
       }
     }
-    ///
-// For testing, manually set pinToConstituency to test dropdown population
-pinToConstituency = {
-  "110001": ["New Delhi", "Chandni Chowk"],
-  "400001": ["Mumbai South"],
-  "560001": ["Bangalore South", "Bangalore Central"]
-};
-populateConstituencyDropdown();
-///
+
     function populateConstituencyDropdown() {
       const constituencySelect = document.getElementById("constituencySelect");
       const allConstituencies = new Set();
