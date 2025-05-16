@@ -4,10 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vote Compass India</title>
-
-  <!-- Tom Select CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet" />
-
   <style>
     body {
       margin: 0;
@@ -76,7 +72,16 @@
       text-align: left;
     }
 
-    input {
+    #pincode-boxes input {
+      width: 36px;
+      padding: 10px;
+      text-align: center;
+      font-size: 1.2em;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    input, select {
       width: 100%;
       padding: 10px;
       font-size: 1em;
@@ -92,16 +97,6 @@
     #start-container {
       margin-top: 20px;
     }
-
-    select {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -114,7 +109,14 @@
   <div class="popup" id="popup">
     <div class="popup-box">
       <label for="pincode">Enter your Pincode:</label>
-      <input type="text" id="pincode" maxlength="6" placeholder="e.g. 110001" />
+      <div id="pincode-boxes" style="display: flex; gap: 6px; margin-top: 10px; margin-bottom: 10px;">
+        <input type="text" maxlength="1" class="pin-digit" />
+        <input type="text" maxlength="1" class="pin-digit" />
+        <input type="text" maxlength="1" class="pin-digit" />
+        <input type="text" maxlength="1" class="pin-digit" />
+        <input type="text" maxlength="1" class="pin-digit" />
+        <input type="text" maxlength="1" class="pin-digit" />
+      </div>
       <button onclick="validatePincode()">Submit</button>
       <div id="location-info"></div>
 
@@ -125,7 +127,7 @@
 
       <div style="margin-top: 30px;">
         <label for="constituencySelect">Or select your constituency by name:</label>
-        <select id="constituencySelect" placeholder="Search Constituency">
+        <select id="constituencySelect">
           <option value="">-- Select Constituency --</option>
         </select>
         <div id="selectedConstituencyInfo" style="margin-top: 12px;"></div>
@@ -138,16 +140,29 @@
     <a href="questions.html"><button>Proceed to Questionnaire</button></a>
   </div>
 
-  <!-- Tom Select JS -->
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-
   <script>
     function openPopup() {
       document.getElementById("popup").style.display = "flex";
     }
 
+    function getPincode() {
+      return Array.from(document.querySelectorAll(".pin-digit")).map(el => el.value).join("");
+    }
+
+    document.querySelectorAll(".pin-digit").forEach((box, idx, all) => {
+      box.addEventListener("input", () => {
+        if (box.value.length === 1 && idx < 5) all[idx + 1].focus();
+      });
+
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && box.value === "" && idx > 0) {
+          all[idx - 1].focus();
+        }
+      });
+    });
+
     function validatePincode() {
-      const pin = document.getElementById("pincode").value.trim();
+      const pin = getPincode();
       const info = document.getElementById("location-info");
 
       if (pin.length !== 6 || isNaN(pin)) {
@@ -190,31 +205,16 @@
     }
 
     function populateConstituencyDropdown() {
-      const select = document.getElementById("constituencySelect");
+      const constituencySelect = document.getElementById("constituencySelect");
       const allConstituencies = new Set();
 
-      Object.values(pinToConstituency).forEach(arr => {
-        arr.forEach(name => allConstituencies.add(name.trim()));
-      });
+      Object.values(pinToConstituency).forEach(arr => arr.forEach(c => allConstituencies.add(c)));
 
-      select.innerHTML = `<option value="">-- Select Constituency --</option>`;
-
-      Array.from(allConstituencies)
-        .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))
-        .forEach(name => {
-          const option = document.createElement("option");
-          option.value = name;
-          option.textContent = name;
-          select.appendChild(option);
-        });
-
-      new TomSelect("#constituencySelect", {
-        create: false,
-        sortField: {
-          field: "text",
-          direction: "asc"
-        },
-        placeholder: "Search Constituency"
+      Array.from(allConstituencies).sort().forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        constituencySelect.appendChild(option);
       });
     }
 
@@ -272,22 +272,21 @@
 
     async function confirmLocation(isCorrect) {
       if (isCorrect) {
-        const popup = document.getElementById("popup");
-        popup.style.display = "none";
+        document.getElementById("popup").style.display = "none";
 
         localStorage.setItem("userLocation", window.detectedLocation);
         document.querySelector(".container").style.display = "none";
         document.getElementById("start-container").style.display = "block";
         document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
 
-        showConstituenciesForPin(document.getElementById("pincode").value.trim());
+        await loadPincodeData();
+        showConstituenciesForPin(getPincode());
       } else {
         document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
-        document.getElementById("pincode").value = "";
+        document.querySelectorAll(".pin-digit").forEach(el => el.value = "");
+        document.querySelector(".pin-digit").focus();
       }
     }
-
-    window.addEventListener("DOMContentLoaded", loadPincodeData);
   </script>
 </body>
 </html>
