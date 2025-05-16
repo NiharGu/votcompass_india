@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vote Compass India</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
   <style>
     body {
       margin: 0;
@@ -72,20 +73,17 @@
       text-align: left;
     }
 
-    #pincode-boxes input {
-      width: 36px;
-      padding: 10px;
-      text-align: center;
-      font-size: 1.2em;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+    .pin-input {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
     }
 
-    input, select {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      margin-top: 10px;
+    .pin-input input {
+      width: 40px;
+      height: 40px;
+      text-align: center;
+      font-size: 1.2em;
       border: 1px solid #ccc;
       border-radius: 6px;
     }
@@ -96,6 +94,16 @@
 
     #start-container {
       margin-top: 20px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -108,15 +116,8 @@
 
   <div class="popup" id="popup">
     <div class="popup-box">
-      <label for="pincode">Enter your Pincode:</label>
-      <div id="pincode-boxes" style="display: flex; gap: 6px; margin-top: 10px; margin-bottom: 10px;">
-        <input type="text" maxlength="1" class="pin-digit" />
-        <input type="text" maxlength="1" class="pin-digit" />
-        <input type="text" maxlength="1" class="pin-digit" />
-        <input type="text" maxlength="1" class="pin-digit" />
-        <input type="text" maxlength="1" class="pin-digit" />
-        <input type="text" maxlength="1" class="pin-digit" />
-      </div>
+      <label>Enter your Pincode:</label>
+      <div class="pin-input" id="pin-boxes"></div>
       <button onclick="validatePincode()">Submit</button>
       <div id="location-info"></div>
 
@@ -140,29 +141,18 @@
     <a href="questions.html"><button>Proceed to Questionnaire</button></a>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   <script>
     function openPopup() {
       document.getElementById("popup").style.display = "flex";
     }
 
-    function getPincode() {
-      return Array.from(document.querySelectorAll(".pin-digit")).map(el => el.value).join("");
+    function getEnteredPin() {
+      return Array.from(document.querySelectorAll(".pin-input input")).map(el => el.value).join("");
     }
 
-    document.querySelectorAll(".pin-digit").forEach((box, idx, all) => {
-      box.addEventListener("input", () => {
-        if (box.value.length === 1 && idx < 5) all[idx + 1].focus();
-      });
-
-      box.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace" && box.value === "" && idx > 0) {
-          all[idx - 1].focus();
-        }
-      });
-    });
-
     function validatePincode() {
-      const pin = getPincode();
+      const pin = getEnteredPin();
       const info = document.getElementById("location-info");
 
       if (pin.length !== 6 || isNaN(pin)) {
@@ -210,26 +200,16 @@
 
       Object.values(pinToConstituency).forEach(arr => arr.forEach(c => allConstituencies.add(c)));
 
-      Array.from(allConstituencies).sort().forEach(name => {
+      const sorted = Array.from(allConstituencies).sort();
+      sorted.forEach(name => {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         constituencySelect.appendChild(option);
       });
-    }
 
-    document.getElementById("constituencySelect").addEventListener("change", (e) => {
-      const selected = e.target.value;
-      const info = document.getElementById("selectedConstituencyInfo");
-      if (selected) {
-        info.innerHTML = `
-          You selected <b>${selected}</b>.<br>
-          <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>
-        `;
-      } else {
-        info.textContent = "";
-      }
-    });
+      new Choices(constituencySelect, { searchEnabled: true, itemSelectText: "" });
+    }
 
     function showConstituenciesForPin(pin) {
       const section = document.getElementById("constituency-section");
@@ -273,20 +253,38 @@
     async function confirmLocation(isCorrect) {
       if (isCorrect) {
         document.getElementById("popup").style.display = "none";
-
         localStorage.setItem("userLocation", window.detectedLocation);
         document.querySelector(".container").style.display = "none";
         document.getElementById("start-container").style.display = "block";
         document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
 
-        await loadPincodeData();
-        showConstituenciesForPin(getPincode());
+        const pin = getEnteredPin();
+        showConstituenciesForPin(pin);
       } else {
         document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
-        document.querySelectorAll(".pin-digit").forEach(el => el.value = "");
-        document.querySelector(".pin-digit").focus();
+        Array.from(document.querySelectorAll(".pin-input input")).forEach(el => el.value = "");
       }
     }
+
+    function createPinInputs() {
+      const pinContainer = document.getElementById("pin-boxes");
+      for (let i = 0; i < 6; i++) {
+        const input = document.createElement("input");
+        input.setAttribute("type", "text");
+        input.setAttribute("maxlength", "1");
+        input.addEventListener("input", (e) => {
+          if (e.inputType !== "deleteContentBackward" && e.target.nextElementSibling) {
+            e.target.nextElementSibling.focus();
+          }
+        });
+        pinContainer.appendChild(input);
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      createPinInputs();
+      loadPincodeData();
+    });
   </script>
 </body>
 </html>
