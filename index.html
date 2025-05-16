@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vote Compass India</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
   <style>
     body {
       margin: 0;
@@ -69,222 +69,227 @@
       border-radius: 12px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.2);
       width: 90%;
-      max-width: 400px;
+      max-width: 420px;
       text-align: left;
     }
 
-    .pin-input {
+    .pincode-input {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin-top: 10px;
     }
 
-    .pin-input input {
+    .pincode-input input {
       width: 40px;
-      height: 40px;
+      height: 50px;
       text-align: center;
-      font-size: 1.2em;
+      font-size: 1.4em;
       border: 1px solid #ccc;
       border-radius: 6px;
     }
 
     #location-info {
-      margin-top: 12px;
-    }
-
-    #start-container {
-      margin-top: 20px;
+      margin-top: 14px;
     }
 
     select {
       width: 100%;
       padding: 10px;
-      font-size: 1em;
       margin-top: 10px;
-      border: 1px solid #ccc;
       border-radius: 6px;
-      cursor: pointer;
+    }
+
+    #start-container {
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Vote Compass India</h1>
-    <p>Discover which political party aligns with your views on key national issues. Answer questions and get matched based on your values.</p>
-    <button onclick="openPopup()">Get Started</button>
-  </div>
+<div class="container">
+  <h1>Vote Compass India</h1>
+  <p>Discover which political party aligns with your views on key national issues. Answer questions and get matched based on your values.</p>
+  <button onclick="openPopup()">Get Started</button>
+</div>
 
-  <div class="popup" id="popup">
-    <div class="popup-box">
-      <label>Enter your Pincode:</label>
-      <div class="pin-input" id="pin-boxes"></div>
-      <button onclick="validatePincode()">Submit</button>
-      <div id="location-info"></div>
+<div class="popup" id="popup">
+  <div class="popup-box">
+    <label for="pincode">Enter your Pincode:</label>
+    <div class="pincode-input" id="pincodeBoxes"></div>
+    <button onclick="validatePincode()">Submit</button>
+    <div id="location-info"></div>
 
-      <div id="constituency-section" style="display:none; margin-top: 20px;">
-        <p><strong>Constituencies for your PIN:</strong></p>
-        <div id="constituency-list"></div>
-      </div>
+    <div id="constituency-section" style="display:none; margin-top: 20px;">
+      <p><strong>Constituencies for your PIN:</strong></p>
+      <div id="constituency-list"></div>
+    </div>
 
-      <div style="margin-top: 30px;">
-        <label for="constituencySelect">Or select your constituency by name:</label>
-        <select id="constituencySelect">
-          <option value="">-- Select Constituency --</option>
-        </select>
-        <div id="selectedConstituencyInfo" style="margin-top: 12px;"></div>
-      </div>
+    <div style="margin-top: 30px;">
+      <label for="constituencySelect">Or select your constituency by name:</label>
+      <select id="constituencySelect">
+        <option value="">-- Select Constituency --</option>
+      </select>
+      <div id="selectedConstituencyInfo" style="margin-top: 12px;"></div>
     </div>
   </div>
+</div>
 
-  <div class="container" id="start-container" style="display:none;">
-    <p id="location-summary"></p>
-    <a href="questions.html"><button>Proceed to Questionnaire</button></a>
-  </div>
+<div class="container" id="start-container" style="display:none;">
+  <p id="location-summary"></p>
+  <a href="questions.html"><button>Proceed to Questionnaire</button></a>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-  <script>
-    function openPopup() {
-      document.getElementById("popup").style.display = "flex";
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+  function openPopup() {
+    document.getElementById("popup").style.display = "flex";
+  }
+
+  function getFullPincode() {
+    return Array.from(document.querySelectorAll('#pincodeBoxes input')).map(i => i.value).join('');
+  }
+
+  function validatePincode() {
+    const pin = getFullPincode();
+    const info = document.getElementById("location-info");
+
+    if (pin.length !== 6 || isNaN(pin)) {
+      info.innerHTML = "❌ Invalid PIN. Please enter a valid 6-digit Indian PIN code.";
+      return;
     }
 
-    function getEnteredPin() {
-      return Array.from(document.querySelectorAll(".pin-input input")).map(el => el.value).join("");
+    fetch(`https://api.postalpincode.in/pincode/${pin}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data[0].Status === "Success") {
+          const place = data[0].PostOffice[0];
+          const locationStr = `${place.Name}, ${place.Block || place.District}, ${place.State}`;
+          window.detectedLocation = locationStr;
+          window.detectedState = place.State;
+          window.detectedPin = pin;
+
+          document.getElementById("location-info").innerHTML = `
+            ✅ Detected location: <strong>${locationStr}</strong><br>Is this correct?<br>
+            <button onclick="confirmLocation(true)">Yes</button>
+            <button onclick="confirmLocation(false)">No</button>
+          `;
+        } else {
+          info.innerHTML = "❌ Could not find a location for this PIN.";
+        }
+      })
+      .catch(() => {
+        info.innerHTML = "⚠️ Error contacting pincode API.";
+      });
+  }
+
+  async function confirmLocation(isCorrect) {
+    if (isCorrect) {
+      document.getElementById("popup").style.display = "none";
+      document.querySelector(".container").style.display = "none";
+      document.getElementById("start-container").style.display = "block";
+      document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
+
+      await loadPincodeData();
+      showConstituenciesForPin(window.detectedPin);
+    } else {
+      document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
+      document.querySelectorAll('#pincodeBoxes input').forEach(i => i.value = '');
+      document.querySelector('#pincodeBoxes input').focus();
     }
+  }
 
-    function validatePincode() {
-      const pin = getEnteredPin();
-      const info = document.getElementById("location-info");
+  let pinToConstituency = {};
 
-      if (pin.length !== 6 || isNaN(pin)) {
-        info.innerHTML = "❌ Invalid PIN. Please enter a 6-digit Indian PIN code.";
-        return;
-      }
-
-      fetch(`https://api.postalpincode.in/pincode/${pin}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data[0].Status === "Success") {
-            const place = data[0].PostOffice[0];
-            const location = `${place.District}, ${place.State}`;
-            window.detectedLocation = location;
-
-            info.innerHTML = `
-              ✅ Detected location: <strong>${location}</strong><br>Is this correct?<br>
-              <button onclick="confirmLocation(true)">Yes</button>
-              <button onclick="confirmLocation(false)">No</button>
-            `;
-          } else {
-            info.innerHTML = "❌ Could not find a location for this PIN.";
-          }
-        })
-        .catch(() => {
-          info.innerHTML = "⚠️ Error contacting pincode API.";
-        });
+  async function loadPincodeData() {
+    try {
+      const response = await fetch('https://nihargu.github.io/votecompass_india/data/pincode_to_constituency.json');
+      pinToConstituency = await response.json();
+      populateConstituencyDropdown();
+    } catch (err) {
+      console.error('Failed to load pincode data:', err);
     }
+  }
 
-    let pinToConstituency = {};
+  function populateConstituencyDropdown() {
+    const select = document.getElementById("constituencySelect");
+    const allConstituencies = new Set();
+    Object.values(pinToConstituency).flat().forEach(c => allConstituencies.add(c));
 
-    async function loadPincodeData() {
-      try {
-        const response = await fetch('https://nihargu.github.io/votecompass_india/data/pincode_to_constituency.json');
-        pinToConstituency = await response.json();
-        populateConstituencyDropdown();
-      } catch (err) {
-        console.error('Failed to load pincode data:', err);
-      }
+    Array.from(allConstituencies).sort().forEach(name => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.appendChild(option);
+    });
+
+    new Choices(select, { searchEnabled: true, itemSelectText: '' });
+  }
+
+  document.getElementById("constituencySelect").addEventListener("change", e => {
+    const selected = e.target.value;
+    const info = document.getElementById("selectedConstituencyInfo");
+    if (selected) {
+      info.innerHTML = `
+        You selected <b>${selected}</b>.<br>
+        <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>
+      `;
+    } else {
+      info.innerHTML = "";
     }
+  });
 
-    function populateConstituencyDropdown() {
-      const constituencySelect = document.getElementById("constituencySelect");
-      const allConstituencies = new Set();
+  function showConstituenciesForPin(pin) {
+    const section = document.getElementById("constituency-section");
+    const list = document.getElementById("constituency-list");
 
-      Object.values(pinToConstituency).forEach(arr => arr.forEach(c => allConstituencies.add(c)));
+    const matches = pinToConstituency[pin];
+    if (!matches || matches.length === 0) {
+      list.textContent = "No constituencies found for this PIN code.";
+    } else if (matches.length === 1) {
+      list.innerHTML = `Constituency: <b>${matches[0]}</b>.<br><a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>`;
+    } else {
+      let options = matches.map(c => `<option value="${c}">${c}</option>`).join("");
+      list.innerHTML = `
+        Multiple constituencies found. Please select:<br>
+        <select id="multiSelect"><option value="">-- Select --</option>${options}</select>
+        <div id="multiResult" style="margin-top:10px;"></div>
+      `;
+      document.getElementById("multiSelect").addEventListener("change", (e) => {
+        const val = e.target.value;
+        document.getElementById("multiResult").innerHTML = val
+          ? `You selected <b>${val}</b>.<br><a href="https://affidavit.eci.gov.in/" target="_blank">View candidate affidavits</a>`
+          : "";
+      });
+    }
+    section.style.display = "block";
+  }
 
-      const sorted = Array.from(allConstituencies).sort();
-      sorted.forEach(name => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        constituencySelect.appendChild(option);
+  // Pincode box setup
+  window.onload = function () {
+    const container = document.getElementById("pincodeBoxes");
+    for (let i = 0; i < 6; i++) {
+      const input = document.createElement("input");
+      input.maxLength = 1;
+      input.type = "text";
+      input.inputMode = "numeric";
+
+      input.addEventListener("input", function () {
+        if (this.value.length === 1 && i < 5) {
+          container.children[i + 1].focus();
+        }
       });
 
-      new Choices(constituencySelect, { searchEnabled: true, itemSelectText: "" });
-    }
-
-    function showConstituenciesForPin(pin) {
-      const section = document.getElementById("constituency-section");
-      const list = document.getElementById("constituency-list");
-
-      if (!pinToConstituency[pin]) {
-        list.textContent = "No constituencies found for this PIN code.";
-      } else {
-        const constituencies = pinToConstituency[pin];
-        if (constituencies.length === 1) {
-          list.innerHTML = `Constituency: <b>${constituencies[0]}</b>.<br>
-            <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>`;
-        } else {
-          let options = constituencies.map(c => `<option value="${c}">${c}</option>`).join("");
-          list.innerHTML = `
-            Multiple constituencies found. Please select:<br>
-            <select id="multiSelect">
-              <option value="">-- Select --</option>
-              ${options}
-            </select>
-            <div id="multiResult" style="margin-top:10px;"></div>
-          `;
-
-          document.getElementById("multiSelect").addEventListener("change", (e) => {
-            const val = e.target.value;
-            const multiResult = document.getElementById("multiResult");
-            if (val) {
-              multiResult.innerHTML = `
-                You selected <b>${val}</b>.<br>
-                <a href="https://affidavit.eci.gov.in/" target="_blank" rel="noopener">View candidate affidavits</a>
-              `;
-            } else {
-              multiResult.textContent = "";
-            }
-          });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Backspace" && this.value === "" && i > 0) {
+          container.children[i - 1].focus();
+        } else if (e.key === "Enter" && getFullPincode().length === 6) {
+          validatePincode();
         }
-      }
-      section.style.display = "block";
+      });
+
+      container.appendChild(input);
     }
-
-    async function confirmLocation(isCorrect) {
-      if (isCorrect) {
-        document.getElementById("popup").style.display = "none";
-        localStorage.setItem("userLocation", window.detectedLocation);
-        document.querySelector(".container").style.display = "none";
-        document.getElementById("start-container").style.display = "block";
-        document.getElementById("location-summary").innerText = `You're from: ${window.detectedLocation}`;
-
-        const pin = getEnteredPin();
-        showConstituenciesForPin(pin);
-      } else {
-        document.getElementById("location-info").innerText = "Please re-enter your correct pincode.";
-        Array.from(document.querySelectorAll(".pin-input input")).forEach(el => el.value = "");
-      }
-    }
-
-    function createPinInputs() {
-      const pinContainer = document.getElementById("pin-boxes");
-      for (let i = 0; i < 6; i++) {
-        const input = document.createElement("input");
-        input.setAttribute("type", "text");
-        input.setAttribute("maxlength", "1");
-        input.addEventListener("input", (e) => {
-          if (e.inputType !== "deleteContentBackward" && e.target.nextElementSibling) {
-            e.target.nextElementSibling.focus();
-          }
-        });
-        pinContainer.appendChild(input);
-      }
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      createPinInputs();
-      loadPincodeData();
-    });
-  </script>
+    container.children[0].focus();
+  };
+</script>
 </body>
 </html>
