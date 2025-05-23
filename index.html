@@ -269,10 +269,12 @@
     for (let i = 0; i < 6; i++) {
       const input = document.createElement("input");
       input.maxLength = 1;
-      input.type = "text";
+      input.type = "tel";
+      input.pattern = "[0-9]*";
       input.inputMode = "numeric";
 
       input.addEventListener("input", function () {
+        this.value = this.value.replace(/[^0-9]/g, ""); // block letters
         if (this.value.length === 1 && i < 5) {
           container.children[i + 1].focus();
         }
@@ -281,8 +283,12 @@
       input.addEventListener("keydown", function (e) {
         if (e.key === "Backspace" && this.value === "" && i > 0) {
           container.children[i - 1].focus();
-        } else if (e.key === "Enter" && getFullPincode().length === 6) {
-          validatePincode();
+        } else if (e.key === "Enter") {
+          setTimeout(() => {
+            if (getFullPincode().length === 6) {
+              validatePincode();
+            }
+          }, 0);
         }
       });
 
